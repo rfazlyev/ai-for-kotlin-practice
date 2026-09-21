@@ -30,6 +30,9 @@ object TestData {
             3 to "Pine Street → River Road",
         )
 
+    // Seeded orders use ids 1-3; the first ride completed after a sandbox reset becomes order 4.
+    const val FIRST_COMPLETED_ORDER_ID = 4
+
     // Driver signup (the classic View screen; strings from res/values/strings.xml).
     const val DRIVER_NAME = "Test Driver"
     const val DRIVER_CAR = "BG 123 AB"

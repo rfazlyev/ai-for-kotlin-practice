@@ -33,4 +33,34 @@ class RideAndHistoryE2ETest : AppiumTestCase() {
             orders.assertHistoryPrices(TestData.PAST_ORDERS)
         }
     }
+
+    @Test
+    @DisplayName("Completed ride appears in order history")
+    @AllureId("1006")
+    fun testCompletedRideAppearsInHistory() {
+        step("Start on the ride form with the displayed pickup (authorized)") {
+            map.awaitReady()
+            map.assertPickup(TestData.PICKUP)
+        }
+        step("Enter the destination") {
+            map.searchDestination(TestData.DESTINATION)
+        }
+        step("Select the Yellow tariff, tap Order and wait for a driver") {
+            map.selectAndOrderRide(1)
+        }
+        step("Complete the ride") {
+            map.completeRide(TestData.YELLOW_PRICE_IN_HISTORY)
+        }
+        step("Return to the ride form") {
+            map.returnHomeAfterCompletion()
+        }
+        step("Open order history") {
+            drawer.openOrders()
+        }
+        step("The completed ride is listed with its route and the Yellow price") {
+            val expectedRoute = "${TestData.PICKUP} → ${TestData.DESTINATION}"
+            orders.assertHistoryRoutes(mapOf(TestData.FIRST_COMPLETED_ORDER_ID to expectedRoute))
+            orders.assertOrderPrice(TestData.FIRST_COMPLETED_ORDER_ID, TestData.YELLOW_PRICE_IN_HISTORY)
+        }
+    }
 }

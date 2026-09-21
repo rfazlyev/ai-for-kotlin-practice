@@ -1,0 +1,64 @@
+# Automation plan: <TEST_CASE_ID>
+
+> Replace every placeholder and delete unused rows. Do not add sections.
+> Maximum size: 60 non-empty lines and 700 words, including tables.
+
+## Status
+
+- Test Case: `<TEST_CASE_ID>` — `<title>`
+- Artifact status: `complete`
+- Automated validation: recorded outside this file by the lesson checker.
+- Generation gate: use this plan only after automated validation passes.
+
+## Test contract
+
+| Item | Decision |
+|---|---|
+| Objective | `<one behavior the test must prove>` |
+| Preconditions | `<Test Case preconditions and authorization source>` |
+| Request | `<HTTP method, path, parameters or body, and repository data sources>` |
+| Expected result | `<status and response fields required by the Test Case>` |
+| Contract source | `<OpenAPI path, operation and response model>` |
+| Coverage check | `<current search evidence that the scenario is not already covered>` |
+
+## Implementation map
+
+Cite a current path and symbol for reused code. For a planned test-layer
+addition, name the file and record the search that found no equivalent. Cover
+the test base, endpoint client, request and response models, test data and test
+class; group items that share a file. Do not import product implementation.
+
+| Request or response concern | Reuse or planned addition | Repository and contract evidence |
+|---|---|---|
+| `<authorization or request>` | `<path and symbol, or planned test-layer change>` | `<repository path and OpenAPI operation>` |
+| `<response or assertion>` | `<path and symbol, or planned test-layer change>` | `<repository path and OpenAPI response field>` |
+
+## Response assertions
+
+| Expected result | Assertion | Expected-value source |
+|---|---|---|
+| `<status or response behavior>` | `<exact assertion>` | `<OpenAPI rule or independent test data>` |
+
+- Excluded checks: `<response fields or adjacent behavior not required by the Test Case>`
+
+## Allowed files
+
+| Path | Change and reason |
+|---|---|
+| `<exact API test-layer path>` | `<required change>` |
+
+Any additional file requires a revised plan and another automated validation pass.
+
+## Risks and stop conditions
+
+- Risk: `<specific contract, repository or environment risk and mitigation>`
+- Stop when: `<contract drift, conflicting evidence, occupied metadata, unstable oracle or unavailable environment>`
+- Do not compensate with backend edits, weaker assertions, retries or unrelated test changes.
+
+## Verification
+
+- Metadata inventory: `<current repository command>`
+- Format check: `<current repository command>`
+- Test run: `<current OS-specific API command that bypasses the test cache>`
+- Required result: `<the generated Test Case executes with zero failures and errors>`
+- Evidence: `<test result and Allure request/response attachment paths>`
