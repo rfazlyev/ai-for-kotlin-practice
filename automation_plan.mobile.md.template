@@ -1,0 +1,65 @@
+# Automation plan: <TEST_CASE_ID>
+
+> Replace every placeholder and delete unused rows. Do not add sections.
+> Maximum size: 60 non-empty lines and 700 words, including tables.
+
+## Status
+
+- Test Case: `<TEST_CASE_ID>` — `<title>`
+- Artifact status: `complete`
+- Automated validation: recorded outside this file by the lesson checker.
+- Generation gate: use this plan only after automated validation passes.
+
+## Test contract
+
+| Item | Decision |
+|---|---|
+| Objective | `<one behavior the test must prove>` |
+| Preconditions | `<Test Case preconditions and the repository support that establishes them>` |
+| Test data | `<selected values and repository sources>` |
+| Expected result | `<observable result from the Test Case>` |
+| Test level | `<why Appium is required>` |
+| Coverage check | `<current search evidence that the scenario is not already covered>` |
+
+## Implementation map
+
+Cite a current path and symbol for reused code. For a planned test-layer
+addition, name the file and record the search that found no equivalent. Cover
+start-state support, page catalogs, actions, locators, test data and transition
+waits; group items that share a file. Do not invent a product locator. Do not
+use screen coordinates as locators or interaction targets.
+
+| Test Case action or result | Reuse or planned addition | Evidence and transition |
+|---|---|---|
+| `<action or result>` | `<path and symbol, or planned test-layer change>` | `<repository evidence and UI state awaited>` |
+| `<action or result>` | `<path and symbol, or planned test-layer change>` | `<repository evidence and UI state awaited>` |
+
+## Business checks
+
+| Expected result | UI evidence | Expected-value source |
+|---|---|---|
+| `<Test Case result>` | `<element or state inspected>` | `<independent expected data>` |
+
+- Excluded checks: `<adjacent behavior not required by the Test Case>`
+
+## Allowed files
+
+| Path | Change and reason |
+|---|---|
+| `<exact Appium test-layer path>` | `<required change>` |
+
+Any additional file requires a revised plan and another automated validation pass.
+
+## Risks and stop conditions
+
+- Risk: `<specific repository or environment risk and mitigation>`
+- Stop when: `<missing product locator or observable result, conflicting evidence, occupied metadata or unavailable environment>`
+- Do not compensate with product edits, weaker assertions, longer timeouts or broad retries.
+
+## Verification
+
+- Metadata inventory: `<current repository command>`
+- Format check: `<current repository command>`
+- Test run: `<current OS-specific runner command>`
+- Required result: `<the generated Test Case executes with zero failures and errors>`
+- Evidence: `<runner log and report paths>`

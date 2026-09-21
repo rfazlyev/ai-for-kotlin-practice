@@ -3,6 +3,24 @@
 This repository is a training sandbox for AI-assisted QA. Agent output remains
 unverified until it is checked against source code, a real run or a log.
 
+## AI policy
+
+The full policy for AI-assisted work lives in [AI_POLICY.md](AI_POLICY.md).
+Read it before any task that changes tests, shared helpers, locators, session
+options or documentation. The rules that apply to every session:
+
+- Never edit the product (`app/`, `fake-api/`) to make a test pass.
+- Proof is an attached unfiltered run: `suite-run.log` plus JUnit XML whose
+  total matches baseline plus new tests. A green CI, an exit code, a cached
+  Gradle task or "the agent said so" is not proof.
+- Code and run artifacts are the source of truth; a fact from prose docs is
+  `UNVERIFIED` until checked.
+- A check that passes only after a retry, longer timeout, weakened assertion or
+  mute is a stop condition: stop and ask.
+- Report blockers and unverified claims as `BLOCKED` or `UNVERIFIED`, never as
+  success.
+- Commits with agent-authored code carry the trailer `Assisted-by: Claude Code`.
+
 ## Safety boundaries
 
 - Never edit `app/` or `fake-api/` to make a test pass. A test-repair task may

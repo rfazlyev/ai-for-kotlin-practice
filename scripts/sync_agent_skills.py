@@ -7,6 +7,8 @@ from pathlib import Path
 
 
 MIRRORED_SKILLS = (
+    "gen-api-test",
+    "gen-mobile-test",
     "run-appium-suite",
     "verify-sandbox-state",
 )
