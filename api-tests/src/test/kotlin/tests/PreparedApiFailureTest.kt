@@ -7,6 +7,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import rule.ApiTestCase
+import testdata.ApiTestData
 
 @Feature("API: Prepared triage failure")
 class PreparedApiFailureTest : ApiTestCase() {
@@ -19,7 +20,7 @@ class PreparedApiFailureTest : ApiTestCase() {
         step("Read order history") {
             val actual = OrdersApi.orders(token)
             assertThat(actual.statusCode).isEqualTo(200)
-            assertThat(actual.body.orders).hasSize(4)
+            assertThat(actual.body.orders).containsExactlyElementsOf(ApiTestData.SEEDED_ORDERS)
         }
     }
 }
