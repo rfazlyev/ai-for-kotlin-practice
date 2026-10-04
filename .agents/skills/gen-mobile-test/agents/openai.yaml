@@ -1,0 +1,4 @@
+interface:
+  display_name: "Generate Mobile Test"
+  short_description: "Plan and generate one verified Appium test"
+  default_prompt: "Use $gen-mobile-test to check coverage, create or validate agent_docs/automation-plans/<case-id>.md, and generate one Appium test from the supplied Test Case."

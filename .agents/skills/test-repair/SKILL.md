@@ -78,6 +78,9 @@ python .agents/hooks/test_repair.py unlock --id <id>
 - Appium tests need a booted emulator, Appium on `127.0.0.1:4723`, the correct
   APK, disabled animations, and a reset sandbox state. Follow the
   `run-appium-suite` skill for platform-specific setup.
+- With a repair lock, the PRE hook checks `fake-api` through `/swagger`. For
+  Appium tests it also checks Appium through `/status` and requires version
+  2.16.2. A failed readiness check blocks execution without consuming a budget.
 - Run one exact method with one direct Gradle-wrapper invocation and
   `--tests Class.method --rerun` (or `--rerun-tasks`). Never use a class-wide
   filter, aggregate `test`, `check`, or `build` tasks, shell operators,
@@ -140,9 +143,13 @@ Setup and reproduction before locking consume neither budget.
 - Compile-only, cached, skipped, zero-test, stale, or otherwise inconclusive
   runs consume no repair attempt, but consume one of three inconclusive-run
   slots.
-- A recognized infrastructure failure consumes neither budget only when no
-  fresh failed target JUnit case exists. Stop and restore fake-api, Appium, or
-  emulator/device connectivity before rerunning.
+- A completed command without fresh matching JUnit is inconclusive and consumes
+  one inconclusive-run slot. Before consuming that slot, the POST hook repeats
+  the service readiness check; a service that became unavailable during the run
+  consumes neither budget. Codex does not expose a shell exit code in its stable
+  `PostToolUse` payload, so the hook does not classify arbitrary console text as
+  infrastructure evidence. A transient outage or device failure that is not
+  reflected by the readiness endpoints remains inconclusive.
 - Fresh JUnit XML containing exactly one matching passing, non-skipped case is
   the only green proof.
 

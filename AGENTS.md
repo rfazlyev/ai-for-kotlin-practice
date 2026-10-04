@@ -5,7 +5,7 @@ unverified until it is checked against source code, a real run or a log.
 
 ## AI policy
 
-The full policy for AI-assisted work lives in [AI_POLICY.md](AI_POLICY.md).
+The full policy for AI-assisted work lives in [AI_POLICY.md](agent_docs/AI_POLICY.md).
 Read it before any task that changes tests, shared helpers, locators, session
 options or documentation. The rules that apply to every session:
 

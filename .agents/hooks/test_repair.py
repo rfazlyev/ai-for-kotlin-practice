@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import http.client
 import json
 import os
 import re
@@ -55,17 +56,15 @@ AGGREGATE_TEST_TASK_NAMES = frozenset({"test", "check", "build", "buildNeeded", 
 ACTIVE_STATES = frozenset({"locked", "active", "running", "verified", "exhausted"})
 GRADLE_WRAPPERS = frozenset({"gradlew", "gradlew.bat"})
 SHELL_CONTROL_FRAGMENTS = ("\r", "\n", "&&", "||", ";", "|", "&", ">", "<", "`", "$(")
-INFRASTRUCTURE_MARKERS = (
-    "sessionnotcreatedexception",
-    "uiautomation not connected",
-    "uiautomator2 server",
-    "device offline",
-    "no devices/emulators found",
-    "eacces: permission denied",
-    "permissionerror: [errno 13]",
-    "accessdeniedexception",
-    "stream has been aborted",
-)
+READINESS_TIMEOUT_SECONDS = 2
+REQUIRED_APPIUM_VERSION = "2.16.2"
+READINESS_CHECKS = {
+    "api-tests": (("fake-api", 8080, "/swagger"),),
+    "appium-tests": (
+        ("fake-api", 8080, "/swagger"),
+        ("Appium", 4723, "/status"),
+    ),
+}
 
 
 def resolve_project_root(value: str | Path) -> Path:
@@ -653,14 +652,16 @@ def _payload_text(value: Any) -> str:
     return value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
 
 
-def _claude_output(root: dict[str, Any], event_name: str) -> tuple[str, int | None]:
+def _claude_output(root: dict[str, Any], event_name: str) -> str:
     if event_name == "PostToolUseFailure":
-        return _payload_text(root.get("error")), None
-    return _payload_text(root.get("tool_response")), None
+        return _payload_text(root.get("error"))
+    return _payload_text(root.get("tool_response"))
 
 
-def _codex_output(root: dict[str, Any], _event_name: str) -> tuple[str, int | None]:
-    return _payload_text(root.get("tool_response")), None
+def _codex_output(root: dict[str, Any], _event_name: str) -> str:
+    # Codex exposes the shell response as text in PostToolUse. It does not
+    # expose the command exit code in the stable hook contract.
+    return _payload_text(root.get("tool_response"))
 
 
 def parse_hook_event(text: str, before: bool, adapter: str) -> dict[str, Any]:
@@ -681,14 +682,13 @@ def parse_hook_event(text: str, before: bool, adapter: str) -> dict[str, Any]:
         "claude": _claude_output,
         "codex": _codex_output,
     }[dialect]
-    output, exit_code = extractor(root, event_name)
+    output = extractor(root, event_name)
     return {
         "eventName": event_name,
         "adapter": dialect,
         "toolUseId": root.get("tool_use_id"),
         "command": command,
         "output": output,
-        "exitCode": exit_code,
     }
 
 
@@ -792,6 +792,43 @@ def _evidence_for(module: str) -> str:
     return "the API JUnit XML and Allure request/response attachments"
 
 
+def _http_get(port: int, path: str) -> tuple[int, bytes]:
+    connection = http.client.HTTPConnection(
+        "127.0.0.1",
+        port,
+        timeout=READINESS_TIMEOUT_SECONDS,
+    )
+    try:
+        connection.request("GET", path)
+        response = connection.getresponse()
+        return response.status, response.read()
+    finally:
+        connection.close()
+
+
+def readiness_error(module: str) -> str | None:
+    """Return a deterministic failure when a required local service is not ready."""
+    for service, port, path in READINESS_CHECKS[module]:
+        try:
+            status, body = _http_get(port, path)
+        except (OSError, http.client.HTTPException) as error:
+            return f"{service} is not ready on 127.0.0.1:{port}: {error}"
+        if status != 200:
+            return f"{service} is not ready on 127.0.0.1:{port}: HTTP {status}"
+        if service == "Appium":
+            try:
+                payload = json.loads(body)
+                version = payload["value"]["build"]["version"]
+            except (KeyError, TypeError, json.JSONDecodeError):
+                return "Appium /status did not return its build version"
+            if version != REQUIRED_APPIUM_VERSION:
+                return (
+                    f"Appium {version} is running; this project requires "
+                    f"{REQUIRED_APPIUM_VERSION}"
+                )
+    return None
+
+
 def resolve_adapter(adapter: str | None) -> str:
     """Require the client configuration to name its response dialect."""
     if adapter not in ADAPTERS:
@@ -857,7 +894,6 @@ def _record_receipt(
         "attempts": item.get("attempts") if item else None,
         "inconclusiveRuns": item.get("inconclusiveRuns") if item else None,
         "runStartedAt": item.get("runStartedAt") if item else None,
-        "exitCode": event.get("exitCode"),
         "proof": proof,
     }
     with RECEIPTS_PATH.open("a", encoding="utf-8") as receipts:
@@ -930,6 +966,11 @@ def process_before(event: dict[str, Any]) -> tuple[str | None, str | None]:
                 f"{_label(item)} already has a test command in progress; wait for "
                 "its POST hook before starting another run.",
             )
+        service_error = readiness_error(str(item["module"]))
+        if service_error:
+            return finish(
+                f"{service_error}. Start the required service and run the same exact test."
+            )
         item["state"] = "running"
         item["runStartedAt"] = now().isoformat()
         item["toolUseId"] = event.get("toolUseId")
@@ -956,10 +997,6 @@ def process_after(event: dict[str, Any]) -> str | None:
             return None
         state_before = str(item.get("state"))
         proof, reason = inspect_junit(item)
-        failed_event = event["eventName"].lower().endswith("failure") or (
-            event.get("exitCode") is not None and event["exitCode"] != 0
-        )
-        output = str(event.get("output", "")).lower()
         if proof == "passed":
             item["state"] = "verified"
             item.pop("exhaustedReason", None)
@@ -988,36 +1025,40 @@ def process_after(event: dict[str, Any]) -> str | None:
                 f"Repair attempt {attempts}/{MAX_REPAIR_ATTEMPTS} failed for "
                 f"{_label(item)}. {instruction}"
             )
-        elif failed_event and any(marker in output for marker in INFRASTRUCTURE_MARKERS):
-            item["state"] = "active"
-            context = (
-                f"Infrastructure failure detected for {_label(item)} without a fresh "
-                "failed target JUnit case. No repair attempt was consumed. Restore "
-                "fake-api/Appium/device connectivity and rerun the same exact test."
-            )
         else:
-            inconclusive_runs = int(item.get("inconclusiveRuns", 0)) + 1
-            item["inconclusiveRuns"] = inconclusive_runs
-            item["state"] = (
-                "exhausted" if inconclusive_runs >= MAX_INCONCLUSIVE_RUNS else "active"
-            )
-            if item["state"] == "exhausted":
-                item["exhaustedReason"] = "inconclusive_runs"
-                instruction = (
-                    "The inconclusive-run limit is exhausted. Complete the item as "
-                    "blocked or skipped after recording the compilation or reporting problem."
+            service_error = readiness_error(str(item["module"]))
+            if service_error:
+                item["state"] = "active"
+                item.pop("exhaustedReason", None)
+                context = (
+                    f"A required service became unavailable during the run for "
+                    f"{_label(item)}: {service_error}. No repair attempt or "
+                    "inconclusive-run slot was consumed. Restore the service and rerun "
+                    "the same exact test."
                 )
             else:
-                item.pop("exhaustedReason", None)
-                instruction = (
-                    "Restore compilation and test reporting, then rerun the same exact test."
+                inconclusive_runs = int(item.get("inconclusiveRuns", 0)) + 1
+                item["inconclusiveRuns"] = inconclusive_runs
+                item["state"] = (
+                    "exhausted" if inconclusive_runs >= MAX_INCONCLUSIVE_RUNS else "active"
                 )
-            context = (
-                f"Inconclusive run {inconclusive_runs}/{MAX_INCONCLUSIVE_RUNS} for "
-                f"{_label(item)} consumed no repair attempt: {reason}. "
-                "Compile-only, cached, skipped, and zero-test runs are not green proof. "
-                f"{instruction}"
-            )
+                if item["state"] == "exhausted":
+                    item["exhaustedReason"] = "inconclusive_runs"
+                    instruction = (
+                        "The inconclusive-run limit is exhausted. Complete the item as "
+                        "blocked or skipped after recording the compilation or reporting problem."
+                    )
+                else:
+                    item.pop("exhaustedReason", None)
+                    instruction = (
+                        "Restore compilation and test reporting, then rerun the same exact test."
+                    )
+                context = (
+                    f"Inconclusive run {inconclusive_runs}/{MAX_INCONCLUSIVE_RUNS} for "
+                    f"{_label(item)} consumed no repair attempt: {reason}. "
+                    "Compile-only, cached, skipped, and zero-test runs are not green proof. "
+                    f"{instruction}"
+                )
         item.pop("junitSnapshot", None)
         item.pop("pendingNotice", None)
         save_queue(queue)

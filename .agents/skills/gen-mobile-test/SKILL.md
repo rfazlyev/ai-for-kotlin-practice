@@ -1,22 +1,23 @@
 ---
 name: gen-mobile-test
-description: Generate one Kotlin/JUnit 5 Appium test from one TestOps-style Test Case and its validated automation_plan.md in this repository. Use when asked to generate or cover one mobile Test Case. Follow the pages-to-actions-to-tests architecture, verified product locators and Allure conventions; never use for API tests, coverage planning, product fixes or open-ended repair.
+description: Create or validate a case-specific automation plan and generate one Kotlin/JUnit 5 Appium test from one TestOps-style Test Case in this repository. Use when asked to plan, generate or cover one mobile Test Case. Follow the pages-to-actions-to-tests architecture, verified product locators and Allure conventions; never use for API tests, product fixes or open-ended repair.
 ---
 
 # Generate a mobile test
 
 ## Purpose
 
-Create one verified Appium test from one validated mobile scenario. Use the
-Test Case for expected behavior, the automation plan for design decisions and
-current repository sources for implementation facts.
+Create or validate one repository-specific automation plan, then create one
+verified Appium test from the supplied mobile scenario. Use the Test Case for
+expected behavior, the automation plan for design decisions and current
+repository sources for implementation facts.
 
 ## Required inputs
 
 | Input | Requirement |
 |---|---|
 | Test Case | One case with preconditions, actions and expected results |
-| Plan | Required after the coverage preflight confirms a gap; `automation_plan.md` created from `automation_plan.mobile.md.template` for this Test Case and accepted by the automated validator |
+| Plan | Required working artifact after the coverage preflight confirms a gap; create it from `agent_docs/templates/automation_plan.mobile.workflow.md.template` when missing, or validate the existing `agent_docs/automation-plans/<case-id>.md` for this Test Case |
 
 Use the complete Test Case text supplied by the task. If the task supplies a
 case file, read the whole file because its header may define test data. Do not
@@ -27,32 +28,53 @@ assume that a case exists under `fixtures/`.
 Run this preflight before validating the plan or loading implementation-specific
 context:
 
-1. Search current mobile coverage and run the `@DisplayName|@AllureId`
-   inventory command from `AGENTS.md`; there is no registry file.
+1. Search current mobile coverage with
+   `rg -n '@DisplayName|@AllureId' appium-tests/src/test/kotlin/tests`; there is no registry file.
 2. Compare the Test Case behavior and expected result with current tests.
-3. If current coverage already proves the behavior, or the assigned
-   `@AllureId` is occupied, stop. Cite the existing file, class and test method,
-   state that no duplicate will be generated and report that no files changed.
+3. If current coverage already proves the complete Test Case behavior, stop.
+   Cite the existing file, class and test method, retain the coverage
+   comparison, and report that no files changed.
+4. If the assigned `@AllureId` is occupied but the existing test does not prove
+   equivalent behavior, stop. Report the conflicting target and the unmet Test
+   Case behavior. Do not generate a duplicate, remap the ID or claim coverage.
 
-A duplicate-coverage stop does not require an automation plan. When the
-preflight confirms a coverage gap, require a plan that passed automated
-validation. If the plan is missing, failed validation, is based on the wrong
-template or describes another Test Case, stop and request a corrected plan.
-Drafting or redesigning the plan is a separate planning task. The validation
-result may be supplied by the current task or lesson handoff; separate human
-approval is not required.
+Neither stop requires an automation plan. Only equivalent existing behavior is
+coverage. When the preflight confirms a coverage gap and the assigned ID is
+available, create or validate the plan before editing test code.
+
+## Plan creation and validation
+
+Use `agent_docs/templates/automation_plan.mobile.workflow.md.template` as the required schema. Do not add
+sections or leave placeholders. Replace `<case-id>` in the plan path with the
+supplied case ID, for example `API-2007` or `MOB-1007`.
+
+1. If `agent_docs/automation-plans/<case-id>.md` is missing, create it for the supplied Test Case.
+2. If it already describes the same Test Case, validate every claim against
+   current repository sources. Correct a stale path, symbol, value or command
+   only when current evidence supports one unambiguous replacement.
+3. Mark the plan validated only after its Test Case mapping, citations,
+   allowed files, stop conditions and verification commands are complete and
+   internally consistent.
+4. If an existing plan describes another Test Case, do not overwrite it unless
+   the current request explicitly authorizes replacement.
+5. If evidence is missing or contradictory, stop before test-code changes and
+   report the exact plan item that cannot be validated.
+
+For a planning-only request, stop after writing and validating
+`agent_docs/automation-plans/<case-id>.md`. For a generation request, continue with the validated
+plan.
 
 ## Required context
 
 `AGENTS.md` is already loaded; use its repository rules and source-routing
 table without reading the file again. Before planning or editing, read:
 
-1. `AI_POLICY.md`;
+1. `agent_docs/AI_POLICY.md`;
 2. `agent_docs/test_architecture.md`;
 3. `agent_docs/page_object_model.md`;
 4. `agent_docs/building_the_project.md`;
 5. `appium-tests/README.md`;
-6. `baseline_report.md` when present;
+6. `agent_docs/baseline_report.md` when present;
 7. the nearest test and every page, action, locator and test-data file cited
    by the plan.
 
@@ -74,26 +96,27 @@ present. Do not invent or remap the ID during generation.
 
 Stop without editing when any condition applies:
 
-- the plan is missing, failed automated validation or is inconsistent with the Test Case;
+- the plan remains incomplete or inconsistent with the Test Case after the
+  creation or validation pass;
 - the plan relies on an existing repository path, symbol, locator or value
   that current sources do not support;
 - the Test Case combines behaviors that require separate scenarios;
 - the oracle can pass on pre-existing or adjacent UI state;
 
-Return the finding to the plan owner. Do not redesign, split or relabel the
-scenario during generation.
+Report the finding and stop. Do not redesign, split or relabel the scenario
+during generation.
 
 The validated plan may introduce a new action-layer method or wait condition
 when the Test Case requires it, current sources contain no equivalent and the
-change stays within the validated test-layer files. Never invent a product
-locator. A locator for an existing UI element must use its verified current
-product `testTag`. A locator used only to assert that a removed element stays
-absent must be explicitly required by the validated plan and supported by the
-repository's migration contract.
+change stays within the plan's validated test-layer files. Never invent a
+product locator. A locator for an existing UI element must use its verified
+current product `testTag`. A locator used only to assert that a removed element
+stays absent must be explicitly required by the validated plan and supported
+by the repository's migration contract.
 
 ## Assertion rules
 
-- Map every assertion to one validated expected result.
+- Map every assertion to one expected result in the Test Case.
 - Assert exact copy or test-data identity only when the Test Case requires it.
 - Use an observable result that fails when the behavior named in the title
   breaks.

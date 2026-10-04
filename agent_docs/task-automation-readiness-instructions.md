@@ -24,8 +24,7 @@ Record clarification questions in the report and complete all selected cases.
 1. Read applicable repository instructions and relevant product and test documentation.
 2. Check the requested behavior against the current implementation and contract. For API cases, verify HTTP methods and paths; record missing endpoint details instead of inventing them.
 3. Check whether the automation stack can prepare and clean up the required data, perform the actions and observe every expected result.
-4. Compare existing coverage by setup, actions and assertions. A similar name or shared endpoint alone does not prove equivalent coverage.
-5. Assign a status from evidence and specify the next action. Do not force a status distribution or classify by keywords.
+4. Assign a status from evidence and specify the next action. Do not force a status distribution or classify by keywords.
 
 - Cite decisive sources using a repository-relative path and symbol or line number, or an identifiable supplied document section.
 - Confirm missing capabilities from the relevant implementation or contract. A failed keyword search or missing documentation is not proof of absence; mark unresolved facts as unknown.
@@ -35,7 +34,7 @@ Record clarification questions in the report and complete all selected cases.
 
 | Status | Assign when | Required next action |
 |---|---|---|
-| `READY` | The full case can be implemented and verified with the existing product and automation capabilities. | Name the next implementation step and the result to assert, or cite equivalent existing coverage. |
+| `READY` | The full case can be implemented and verified with the existing product and automation capabilities. | Name the next implementation step and the result to assert. |
 | `BLOCKED` | A confirmed missing product or automation capability prevents full verification of the case. | Name the missing capability, the evidence for the gap and the change needed before automation can proceed. |
 | `NEEDS_CLARIFICATION` | A requirement, contract, verification criterion or evidence gap prevents a decision, and no sufficient blocker is confirmed. | Ask a specific question whose answer would change the decision. |
 
@@ -43,10 +42,10 @@ Record clarification questions in the report and complete all selected cases.
 - Record clarification questions in the report and complete the remaining cases. Do not wait for answers or invent them.
 - A missing page object, client method or test class is normal implementation work when the underlying behavior is supported.
 - `READY` does not mean implemented, passed or executed.
-- If equivalent coverage already exists, recommend updating the coverage record instead of creating a duplicate test.
 
 ## Scope rules
 
+- Coverage assessment is a separate task. Do not replace a selected case with another test or treat equivalent existing behavior as completion of the assignment.
 - Assess software capabilities from sources. Do not inspect installed tools, running services, connected devices or credentials. Local execution setup does not affect readiness.
 - Preserve the case's requested behavior, test layer, device requirements and complete expected result.
 - A mock, partial check or alternative scenario does not establish the original case's readiness unless it satisfies the complete requirement.

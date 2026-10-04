@@ -1,0 +1,27 @@
+diff --git a/appium-tests/src/test/kotlin/rule/AppiumTestCase.kt b/appium-tests/src/test/kotlin/rule/AppiumTestCase.kt
+--- a/appium-tests/src/test/kotlin/rule/AppiumTestCase.kt
++++ b/appium-tests/src/test/kotlin/rule/AppiumTestCase.kt
+@@ -145,7 +145,22 @@
+                 ".png",
+             )
+         }.onFailure { failure ->
+-            Allure.addAttachment("Screen capture failed", failure.stackTraceToString())
++            runCatching {
++                Allure.addAttachment("Screen capture failed", failure.stackTraceToString())
++            }
++        }
++        runCatching {
++            val pageSource = activeDriver.pageSource.orEmpty().toByteArray(Charsets.UTF_8)
++            Allure.addAttachment(
++                "UI page source",
++                "application/xml",
++                ByteArrayInputStream(pageSource),
++                ".xml",
++            )
++        }.onFailure { failure ->
++            runCatching {
++                Allure.addAttachment("UI page source capture failed", failure.stackTraceToString())
++            }
+         }
+     }
+ }

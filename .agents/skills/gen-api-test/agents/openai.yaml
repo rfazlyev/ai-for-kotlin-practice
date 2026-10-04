@@ -1,0 +1,4 @@
+interface:
+  display_name: "Generate API Test"
+  short_description: "Assess API coverage or automate assigned test cases"
+  default_prompt: "Use $gen-api-test to plan, implement and verify the supplied API Test Case under its assigned Allure ID."
