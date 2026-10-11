@@ -201,8 +201,7 @@ async def close_model_clients(models: Iterable[Model | None]) -> None:
 def build_graph(agents: dict):
     """Repair owns its existing run loop and budgets; the graph chooses stages."""
     builder = GraphBuilder()
-    # Practice: register review, connect verified results, and check freshness before review.
-    for name in ("readiness", "generation", "repair"):
+    for name in ("readiness", "generation", "repair", "review"):
         if name in agents:
             builder.add_node(agents[name], name)
 
@@ -216,18 +215,29 @@ def build_graph(agents: dict):
             and output.get("evidence", {}).get("target_status") == "FAILED"
         )
 
+    def passed(state, name):
+        return result_data(state, name).get("status") == "VERIFIED"
+
     if "readiness" in agents:
         builder.add_edge("readiness", "generation", ready)
         builder.set_entry_point("readiness")
     else:
         builder.set_entry_point("generation")
     builder.add_edge("generation", "repair", lambda state: failed_target(state, "generation"))
+    builder.add_edge("generation", "review", lambda state: passed(state, "generation"))
+    builder.add_edge("repair", "review", lambda state: passed(state, "repair"))
     builder.set_max_node_executions(4)
     graph = builder.build()
 
     def before_node(event):
         event.invocation_state["active_stage"] = event.node_id
         repository = event.invocation_state["repository"]
+        if event.node_id == "review":
+            preceding = result_data(event.source.state, "repair") or result_data(
+                event.source.state, "generation"
+            )
+            if not verified_target(repository.current_evidence(), preceding.get("target", "")):
+                event.cancel_node = "The current test has no matching fresh passing result"
         if not event.cancel_node:
             print(f"[{repository.case_id}] {event.node_id}: started", file=sys.stderr, flush=True)
 
