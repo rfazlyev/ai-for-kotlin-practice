@@ -100,9 +100,9 @@ abstract class AppiumTestCase {
     }
 
     /**
-     * Wraps [body] as a named Allure step and attaches the screen state reached
-     * after a successful step. [ArtifactsOnFailure] owns the screenshot, logcat,
-     * and page source when the step throws.
+     * Wraps [body] as a named Allure step and attaches a screenshot and UI page
+     * source after a successful step. Captures are independent and do not change
+     * the test outcome. [ArtifactsOnFailure] captures evidence when the step throws.
      */
     protected fun step(
         name: String,
@@ -145,7 +145,22 @@ abstract class AppiumTestCase {
                 ".png",
             )
         }.onFailure { failure ->
-            Allure.addAttachment("Screen capture failed", failure.stackTraceToString())
+            runCatching {
+                Allure.addAttachment("Screen capture failed", failure.stackTraceToString())
+            }
+        }
+        runCatching {
+            val pageSource = activeDriver.pageSource.orEmpty().toByteArray(Charsets.UTF_8)
+            Allure.addAttachment(
+                "UI page source",
+                "application/xml",
+                ByteArrayInputStream(pageSource),
+                ".xml",
+            )
+        }.onFailure { failure ->
+            runCatching {
+                Allure.addAttachment("UI page source capture failed", failure.stackTraceToString())
+            }
         }
     }
 }
