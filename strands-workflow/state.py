@@ -1,0 +1,51 @@
+"""Small stage results passed between the native Strands graph nodes."""
+
+from typing import Literal
+
+from pydantic import BaseModel, Field
+
+EVIDENCE_STATUSES = frozenset({"VERIFIED", "FAILED", "VERIFICATION_INCOMPLETE"})
+
+
+class Assessment(BaseModel):
+    status: Literal["READY", "BLOCKED", "NEEDS_CLARIFICATION"]
+    reason_and_evidence: str
+    next_action_or_question: str
+
+
+class Implementation(BaseModel):
+    status: Literal[
+        "VERIFIED", "FAILED", "VERIFICATION_INCOMPLETE", "BLOCKED", "ALREADY_IMPLEMENTED"
+    ]
+    target: str = ""
+    summary: str
+
+
+class RepairOutcome(BaseModel):
+    status: Literal[
+        "VERIFIED",
+        "PRODUCT_BUG",
+        "NEEDS_INVESTIGATION",
+        "INFRASTRUCTURE_ISSUE",
+        "EXHAUSTED",
+        "VERIFICATION_INCOMPLETE",
+    ]
+    target: str
+    summary: str
+
+
+class Finding(BaseModel):
+    check: str
+    path: str
+    line: int = Field(ge=1)
+    issue: str
+    impact: str
+    required_change: str
+
+
+class ReviewResult(BaseModel):
+    complete: bool
+    summary: str
+    findings: list[Finding]
+    unverified: str = "none"
+    question: str = "none"
